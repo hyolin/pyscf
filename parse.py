@@ -52,23 +52,32 @@ def _parse_value(text: str):
     start = -1
     end = -1
     flag = False
-    
+    default_value = -1
+
     var = []
     i = 0
     
-    import pdb
-    pdb.set_trace()
     while i < len(text):
         if text[i: i+2] == '${':
-            start = i + 2
+            start = i # + 2
             if flag == True:
                 raise Exception("match error [idx= {}/text= {}".format(i, text))
             flag = True
             i += 1
+            default_value = -1
+        elif text[i] == ':':
+            if flag :
+                default_value = i
         elif text[i] == '}':
             end = i
             if flag == True and start < end and start != -1:
-                _var = ParseVar(text[start: end], start, end)
+                if default_value == -1:
+                    v = text[start+2: end]
+                    dv = None
+                else:
+                    v = text[start+2: default_value]
+                    dv = text[default_value + 1: end].strip()
+                _var = ParseVar(v, start, end, dv)
                 var.append(_var)
             else:
                 raise Exception("match error [idx= {}/text= {}".format(i, text))
