@@ -7,7 +7,7 @@ _pattern = re.compile(_regex)
 
 
 # define parse result struct for var
-ParseVar = namedtuple('ParseVar', ('value', 'start', 'end'))
+ParseVar = namedtuple('ParseVar', ('value', 'start', 'end', 'default_value'))
 
 
 def _parse(keys: list, value, config: dict, pattern=_pattern):
@@ -86,13 +86,47 @@ def _parse_value(text: str):
         i += 1
     return var
 
+def _parse_var(value, environs):
+        if not ('${' in value and '}' in value):
+            return None
+        _ret_value = _parse_value(value)
+        if len(_ret_value) < 1:
+            return None
 
-def parse_var(config):
-    pass
+        var = []
+        pre = 0
+        for item in _ret_value:
+            _rep_value = environs.get(item.value, item.default_value)
+            if not _rep_value:
+                raise ValueError("var[{}] not have value".format(item))
+            var.append(value[pre: item.start])
+            var.append(str(_rep_value))
+            pre = item.end + 1
+        return ''.join(var)
+
+
+def parse_var(config, environs):
+    for key, value in config.items():
+        if isinstance(value, dict):
+            parse_var(value, environs)
+        elif isinstance(value, list):
+            for i, _v in enumerate(value):
+                if isinstance(_v, str):
+                    pv = _parse_var(_v, environs)
+                    if pv:
+                        value[i] = pv
+                else:
+                    parse_var(_v, environs)
+        elif isinstance(value, str):
+            pv = _parse_var(value, environs)
+            if pv:
+                config[key] = pv
+
 
 if __name__ == "__main__":
+    s = 'just test{varhaa${var2:default}dfd${var3}'
     dic = {
-            "FIND[0].pattern": 1,
+            "FIND[0].pattern": s,
             "FIND[1].pattern": 2,
             "REDIS_CONFIG.config[0].k1.a[0]":'v1',
             "REDIS_CONFIG.config[0].k1.a[1]":'v2',
@@ -101,6 +135,11 @@ if __name__ == "__main__":
     config = parse_key(dic)
     print(config)
     
-    s = 'just test{varhaa${var2}dfd${var3}'
+
     _ret_value = _parse_value(s)
     print(_ret_value)
+
+    parse_var(config, {})
+    print(config)
+    
+
