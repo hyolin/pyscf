@@ -38,9 +38,11 @@ def _parse(keys: list, value, config: dict, pattern=_pattern):
                 _config[key] = {}
             _config = _config[key]
 
+
 def parse_key(config: dict):
     """
     parse spring cloud config keys
+    return parsed key
     """
     _config = {}
     for key, value in config.items():
@@ -49,6 +51,9 @@ def parse_key(config: dict):
     return _config
 
 def _parse_value(text: str):
+    """
+    parse var in text
+    """
     start = -1
     end = -1
     flag = False
@@ -86,23 +91,24 @@ def _parse_value(text: str):
         i += 1
     return var
 
-def _parse_var(value, environs):
-        if not ('${' in value and '}' in value):
-            return None
-        _ret_value = _parse_value(value)
-        if len(_ret_value) < 1:
-            return None
 
-        var = []
-        pre = 0
-        for item in _ret_value:
-            _rep_value = environs.get(item.value, item.default_value)
-            if not _rep_value:
-                raise ValueError("var[{}] not have value".format(item))
-            var.append(value[pre: item.start])
-            var.append(str(_rep_value))
-            pre = item.end + 1
-        return ''.join(var)
+def _parse_var(value: str, environs: dict):
+    if not ('${' in value and '}' in value):
+        return None
+    _ret_value = _parse_value(value)
+    if len(_ret_value) < 1:
+        return None
+
+    var = []
+    pre = 0
+    for item in _ret_value:
+        _rep_value = environs.get(item.value, item.default_value)
+        if not _rep_value:
+            raise ValueError("var[{}] not have value".format(item))
+        var.append(value[pre: item.start])
+        var.append(str(_rep_value))
+        pre = item.end + 1
+    return ''.join(var)
 
 
 def parse_var(config, environs):
